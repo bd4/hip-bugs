@@ -7,10 +7,12 @@
 #define hipMemset cudaMemset
 #define hipMemcpy cudaMemcpy
 #define hipDeviceSynchronize cudaDeviceSynchronize
+#define hipGetErrorString cudaGetErrorString
 
 #define hipMemcpyHostToDevice cudaMemcpyHostToDevice
 #define hipMemcpyDeviceToHost cudaMemcpyDeviceToHost
 
+#define hipSuccess cudaSuccess
 #define HIPFFT_SUCCESS CUFFT_SUCCESS
 
 #define HIPFFT_Z2Z CUFFT_Z2Z
