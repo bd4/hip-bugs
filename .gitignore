@@ -1,0 +1,3 @@
+fft_strided_hip
+fft_strided_cuda
+fft_strided_nvcc
