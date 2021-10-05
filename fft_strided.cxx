@@ -111,6 +111,7 @@ void fft_r2c_1d_strided() {
   CHECK(hipMemset(h_A, 0, rbytes));
   CHECK(hipMemset(h_B_expected, 0, cbytes));
   CHECK(hipMemset(d_B, 0, cbytes));
+  CHECK(hipMemset(d_A2, 0, rbytes));
 
   // x = [2 3 -1 4];
   h_A[0 * rstride] = 2;
