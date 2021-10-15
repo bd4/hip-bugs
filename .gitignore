@@ -1,3 +1,5 @@
 fft_strided_hip
 fft_strided_cuda
 fft_strided_nvcc
+batched_zgetrs_hip 
+batched_zgetrs_nvcc
