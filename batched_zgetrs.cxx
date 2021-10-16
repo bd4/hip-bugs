@@ -36,7 +36,7 @@
 inline void read_carray(std::ifstream& f, int n, std::complex<double>* Adata) {
     for (int i=0; i < n; i++) {
         //std::cout << i << " " << std::endl;
-        f >> Adata[n];
+        f >> Adata[i];
     }
 }
 
