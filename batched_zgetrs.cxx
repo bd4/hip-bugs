@@ -54,18 +54,10 @@ int main(int argc, char **argv) {
     std::complex<double> *h_Adata, *d_Adata, *h_Bdata, *d_Bdata;
     int *h_piv, *d_piv;
 
-    /*
-    std::ifstream f("test.txt");
+#ifndef CUDAHIPBLAS
+    rocblas_initialize();
+#endif
 
-    std::complex<double> a;
-
-    f >> a;
-    std::cout << a << std::endl;
-
-    f.close();
-    return 0;
-    */
-    
     std::ifstream f("zgetrs.txt", std::ifstream::in);
 
     f >> n;
