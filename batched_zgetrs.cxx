@@ -33,7 +33,8 @@
     }                                                                     \
   }
 
-inline void read_carray(std::ifstream& f, int n, std::complex<double>* Adata) {
+template <typename T>
+inline void read_carray(std::ifstream& f, int n, std::complex<T>* Adata) {
     for (int i=0; i < n; i++) {
         //std::cout << i << " " << std::endl;
         f >> Adata[i];
@@ -46,17 +47,14 @@ inline void read_iarray(std::ifstream& f, int n, int *data) {
     }
 }
 
-int main(int argc, char **argv) {
+template <typename T, typename RT, typename F>
+void test(F&& getrs) {
     rocblas_handle h;
     int n, nrhs, lda, ldb, batch_size;
     int Aptr_size, Bptr_size, Adata_size, Bdata_size, piv_size;
-    std::complex<double> **h_Aptr, **d_Aptr, **h_Bptr, **d_Bptr;
-    std::complex<double> *h_Adata, *d_Adata, *h_Bdata, *d_Bdata;
+    std::complex<T> **h_Aptr, **d_Aptr, **h_Bptr, **d_Bptr;
+    std::complex<T> *h_Adata, *d_Adata, *h_Bdata, *d_Bdata;
     int *h_piv, *d_piv;
-
-#ifndef CUDAHIPBLAS
-    rocblas_initialize();
-#endif
 
     std::ifstream f("zgetrs.txt", std::ifstream::in);
 
@@ -135,21 +133,21 @@ int main(int argc, char **argv) {
     double elapsed, total = 0.0;
     int *info, info_sum;
 
+    info = (int *)calloc(batch_size, sizeof(*info));
     for (int i=0; i<NRUNS; i++) {
         // std::cout << "run [" << i << "]: start" << std::endl;
         clock_gettime(CLOCK_MONOTONIC, &start);
 #ifdef CUDAHIPBLAS
-        info = (int *)calloc(batch_size, sizeof(*info));
-        CHECK_BLAS(cublasZgetrsBatched(h, CUBLAS_OP_N, n, nrhs,
-                       reinterpret_cast<rocblas_double_complex**>(d_Aptr), lda,
+        CHECK_BLAS(getrs(h, CUBLAS_OP_N, n, nrhs,
+                       reinterpret_cast<RT**>(d_Aptr), lda,
                        d_piv,
-                       reinterpret_cast<rocblas_double_complex**>(d_Bptr), ldb,
+                       reinterpret_cast<RT**>(d_Bptr), ldb,
                        info, batch_size));
 #else
-        CHECK_BLAS(rocsolver_zgetrs_batched(h, rocblas_operation_none, n, nrhs,
-                       reinterpret_cast<rocblas_double_complex**>(d_Aptr), lda,
+        CHECK_BLAS(getrs(h, rocblas_operation_none, n, nrhs,
+                       reinterpret_cast<RT**>(d_Aptr), lda,
                        d_piv, n,
-                       reinterpret_cast<rocblas_double_complex**>(d_Bptr), ldb,
+                       reinterpret_cast<RT**>(d_Bptr), ldb,
                        batch_size));
 #endif
         CHECK(hipDeviceSynchronize());
@@ -185,4 +183,14 @@ int main(int argc, char **argv) {
     CHECK(hipFree(d_piv));
 
     std::cout << "free done" << std::endl;
+}
+
+int main(int argc, char **argv) {
+#ifndef CUDAHIPBLAS
+    rocblas_initialize();
+#endif
+    std::cout << "==== double ====" << std::endl;
+    test<double, rocblas_double_complex>(&rocsolver_zgetrs_batched);
+    std::cout << "==== float  ====" << std::endl;
+    test<float, rocblas_float_complex>(&rocsolver_cgetrs_batched);
 }

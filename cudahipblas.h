@@ -23,7 +23,7 @@ using rocblas_handle = cublasHandle_t;
 using hipStream_t = cudaStream_t;
 
 using rocblas_double_complex = cuDoubleComplex;
-using rocblas_complex = cuComplex;
+using rocblas_float_complex = cuComplex;
 
 #define rocblas_create_handle cublasCreate
 #define rocblas_destroy_handle cublasDestroy
@@ -31,3 +31,4 @@ using rocblas_complex = cuComplex;
 #define rocblas_operation_none CUBLAS_OP_N
 
 #define rocsolver_zgetrs_batched cublasZgetrsBatched
+#define rocsolver_cgetrs_batched cublasCgetrsBatched
