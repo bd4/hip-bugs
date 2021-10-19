@@ -209,8 +209,8 @@ int main(int argc, char **argv) {
 #ifndef CUDAHIPBLAS
     rocblas_initialize();
 #endif
-    std::cout << "==== double ====" << std::endl;
-    test<double, rocblas_double_complex>(&rocsolver_zgetrs_batched);
     std::cout << "==== float  ====" << std::endl;
     test<float, rocblas_float_complex>(&rocsolver_cgetrs_batched);
+    std::cout << "==== double ====" << std::endl;
+    test<double, rocblas_double_complex>(&rocsolver_zgetrs_batched);
 }
