@@ -105,11 +105,6 @@ void test(F&& getrs) {
     CHECK(hipHostMalloc((void**)&h_piv, piv_size));
     CHECK(hipMalloc((void**)&d_piv, piv_size));
 
-    CHECK(hipMemset(h_Adata, 0, Adata_size));
-    CHECK(hipMemset(h_Bdata, 0, Bdata_size));
-
-    CHECK(hipDeviceSynchronize());
-
     std::cout << "malloc done" << std::endl;
 
 #ifdef READ_INPUT
@@ -118,6 +113,10 @@ void test(F&& getrs) {
     read_iarray(f, n*batch_size, h_piv);
     f.close();
 #else
+    CHECK(hipMemset(h_Adata, 0, Adata_size));
+    CHECK(hipMemset(h_Bdata, 0, Bdata_size));
+    CHECK(hipDeviceSynchronize());
+
     for (int b = 0; b < batch_size; b++) {
         for (int i = 0; i < n; i++) {
             h_Adata[b*n*n + i*n + i] = CT(1.0, 0.0);
@@ -184,6 +183,7 @@ void test(F&& getrs) {
     std::cout << "zgetrs done (avg " << total / (NRUNS-1) << ")" << std::endl;
 
     CHECK_BLAS(rocblas_destroy_handle(h));
+    CHECK(hipDeviceSynchronize());
 
     std::cout << "destroy done" << std::endl;
 
@@ -199,6 +199,8 @@ void test(F&& getrs) {
 
     CHECK(hipHostFree(h_piv));
     CHECK(hipFree(d_piv));
+
+    CHECK(hipDeviceSynchronize());
 
     std::cout << "free done" << std::endl;
 }
