@@ -15,10 +15,10 @@ fft_strided_nvcc: fft_strided.cxx
 	nvcc -g -std=c++14 -lcufft -DCUDAHIPFFT=1 -o fft_strided_nvcc fft_strided.cxx
 
 batched_zgetrs_hip: batched_zgetrs.cxx
-	HIP_PLATFORM="amd" hipcc -g -std=c++14 -L $(ROCM_PATH)/lib -lrocblas -lrocsolver -I $(ROCM_PATH)/include -o $@ $<
+	HIP_PLATFORM="amd" hipcc -g -ggdb -Ofast -std=c++14 -L $(ROCM_PATH)/lib -lrocblas -lrocsolver -I $(ROCM_PATH)/include -o $@ $<
 
 batched_zgetrs_hip_read: batched_zgetrs.cxx
-	HIP_PLATFORM="amd" hipcc -g -std=c++14 -D READ_INPUT -L $(ROCM_PATH)/lib -lrocblas -lrocsolver -I $(ROCM_PATH)/include -o $@ $<
+	HIP_PLATFORM="amd" hipcc -g -ggdb -Ofast -std=c++14 -D READ_INPUT -L $(ROCM_PATH)/lib -lrocblas -lrocsolver -I $(ROCM_PATH)/include -o $@ $<
 
 batched_zgetrs_nvcc: batched_zgetrs.cxx
 	nvcc -g -std=c++14 -lcublas -DCUDAHIPBLAS=1 -o $@ $<
