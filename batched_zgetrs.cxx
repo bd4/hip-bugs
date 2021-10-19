@@ -56,6 +56,9 @@ void test(F&& getrs) {
     std::complex<T> *h_Adata, *d_Adata, *h_Bdata, *d_Bdata;
     int *h_piv, *d_piv;
 
+    using CT = std::complex<T>;
+
+#ifdef READ_INPUT
     std::ifstream f("zgetrs.txt", std::ifstream::in);
 
     f >> n;
@@ -63,6 +66,14 @@ void test(F&& getrs) {
     f >> lda;
     f >> ldb;
     f >> batch_size;
+
+#else
+    n = 140;
+    nrhs = 1;
+    lda = n;
+    ldb = n;
+    batch_size = 384;
+#endif
 
     std::cout << "n    = " << n    << std::endl;
     std::cout << "nrhs = " << nrhs << std::endl;
@@ -94,30 +105,34 @@ void test(F&& getrs) {
     CHECK(hipHostMalloc((void**)&h_piv, piv_size));
     CHECK(hipMalloc((void**)&d_piv, piv_size));
 
+    CHECK(hipMemset(h_Adata, 0, Adata_size));
+    CHECK(hipMemset(h_Bdata, 0, Bdata_size));
+
     CHECK(hipDeviceSynchronize());
 
     std::cout << "malloc done" << std::endl;
 
+#ifdef READ_INPUT
     read_carray(f, n*n*batch_size, h_Adata);
     read_carray(f, n*nrhs*batch_size, h_Bdata);
     read_iarray(f, n*batch_size, h_piv);
-
-    /*
-    char c;
-    while (f.get(c))
-        std::cout << "'" << c << "', ";
-    std::cout << std::endl;
-    std::cout << "eof " << f.eof() << std::endl;
-    */
-
     f.close();
+#else
+    for (int b = 0; b < batch_size; b++) {
+        for (int i = 0; i < n; i++) {
+            h_Adata[b*n*n + i*n + i] = CT(1.0, 0.0);
+            h_Bdata[b*n*nrhs + i] = CT(i, 0.0);
+            h_piv[b*n + i] = i;
+        }
+    }
+#endif
 
     for (int i = 0; i < batch_size; i++) {
         h_Aptr[i] = d_Adata + (n*n*i);
         h_Bptr[i] = d_Bdata + (n*nrhs*i);
     }
 
-    std::cout << "read done" << std::endl;
+    std::cout << "read/init done" << std::endl;
 
     CHECK(hipMemcpy(d_Aptr, h_Aptr, Aptr_size, hipMemcpyHostToDevice));
     CHECK(hipMemcpy(d_Adata, h_Adata, Adata_size, hipMemcpyHostToDevice));
@@ -133,7 +148,10 @@ void test(F&& getrs) {
     double elapsed, total = 0.0;
     int *info, info_sum;
 
+#ifdef CUDAHIPBLAS
     info = (int *)calloc(batch_size, sizeof(*info));
+#endif
+
     for (int i=0; i<NRUNS; i++) {
         // std::cout << "run [" << i << "]: start" << std::endl;
         clock_gettime(CLOCK_MONOTONIC, &start);
