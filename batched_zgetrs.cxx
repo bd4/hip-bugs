@@ -120,8 +120,10 @@ void test(F&& getrs) {
     for (int b = 0; b < batch_size; b++) {
         for (int i = 0; i < n; i++) {
             h_Adata[b*n*n + i*n + i] = CT(1.0, 0.0);
-            h_Bdata[b*n*nrhs + i] = CT(i, 0.0);
-            h_piv[b*n + i] = i;
+            for (int j = 0; j < nrhs; j++) {
+                h_Bdata[b*n*nrhs + j*nrhs + i] = CT(i, 0.0);
+            }
+            h_piv[b*n + i] = i+1;
         }
     }
 #endif
@@ -201,6 +203,10 @@ void test(F&& getrs) {
     CHECK(hipFree(d_piv));
 
     CHECK(hipDeviceSynchronize());
+
+#ifdef CUDAHIPBLAS
+    free(info);
+#endif
 
     std::cout << "free done" << std::endl;
 }
