@@ -121,7 +121,7 @@ void test(F&& getrs) {
         for (int i = 0; i < n; i++) {
             h_Adata[b*n*n + i*n + i] = CT(1.0, 0.0);
             for (int j = 0; j < nrhs; j++) {
-                h_Bdata[b*n*nrhs + j*nrhs + i] = CT(i, 0.0);
+                h_Bdata[b*n*nrhs + i*nrhs + j] = CT(i / j * b, i * j / b);
             }
             h_piv[b*n + i] = i+1;
         }
@@ -183,6 +183,27 @@ void test(F&& getrs) {
     }
 
     std::cout << "zgetrs done (avg " << total / (NRUNS-1) << ")" << std::endl;
+
+#ifndef READ_INPUT
+    // check result
+    CHECK(hipMemcpy(h_Bdata, d_Bdata, Bdata_size, hipMemcpyDeviceToHost));
+    bool ok = true;
+    CT err = CT(0.0, 0.0);
+    for (int b = 0; b < batch_size; b++) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < nrhs; j++) {
+                err = h_Bdata[b*n*nrhs + i*nrhs + j] - CT(i / j * b, i * j / b);
+                if (std::abs(err) > 0.0) {
+                    std::cout << "err of " << err
+                              << " at [" << b << ", " << i
+                              <<", " << j << "]" << std::endl;
+                    ok = false;
+                    break;
+                }
+            }
+        }
+    }
+#endif
 
     CHECK_BLAS(rocblas_destroy_handle(h));
     CHECK(hipDeviceSynchronize());
