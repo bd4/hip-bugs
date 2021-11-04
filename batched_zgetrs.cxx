@@ -121,7 +121,7 @@ void test(F&& getrs) {
         for (int i = 0; i < n; i++) {
             h_Adata[b*n*n + i*n + i] = CT(1.0, 0.0);
             for (int j = 0; j < nrhs; j++) {
-                h_Bdata[b*n*nrhs + i*nrhs + j] = CT(i / j * b, i * j / b);
+                h_Bdata[b*n*nrhs + i*nrhs + j] = CT(i / (j+1) * b, i * j / (b+1));
             }
             h_piv[b*n + i] = i+1;
         }
@@ -192,7 +192,7 @@ void test(F&& getrs) {
     for (int b = 0; b < batch_size; b++) {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < nrhs; j++) {
-                err = h_Bdata[b*n*nrhs + i*nrhs + j] - CT(i / j * b, i * j / b);
+                err = h_Bdata[b*n*nrhs + i*nrhs + j] - CT(i / (j+1) * b, i * j / (b+1));
                 if (std::abs(err) > 0.0) {
                     std::cout << "err of " << err
                               << " at [" << b << ", " << i
