@@ -233,8 +233,11 @@ int main (int argc, char *argv[])
 
   std::cout << "managed memory runs" << std::endl;
   solve(h, p);
+  std::cout << p.rhs[0] << std::endl;
   solve(h, p);
+  std::cout << p.rhs[0] << std::endl;
   solve(h, p);
+  std::cout << p.rhs[0] << std::endl;
   solve(h, p);
 
   auto d_p = problem_to_device(p);
