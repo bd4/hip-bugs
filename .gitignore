@@ -3,3 +3,5 @@ fft_strided_cuda
 fft_strided_nvcc
 batched_zgetrs_hip 
 batched_zgetrs_nvcc
+bench_sparse
+sparse_matrix.dat
