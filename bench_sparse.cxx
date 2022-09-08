@@ -37,6 +37,8 @@ struct problem
     int *col_ind;
     complex_t *val;
     complex_t *rhs;
+    complex_t *sol;
+    complex_t *sol_m;
 };
 
 struct problem read_problem()
@@ -75,7 +77,9 @@ struct problem read_problem()
   std::cout << "nrhs " << p.nrhs << std::endl;
   nbytes = p.nnz * p.nrhs * sizeof(complex_t);
   CHECK(hipMallocManaged(&p.rhs, nbytes));
-  CHECK(hipMemAdvise(p.val, nbytes, hipMemAdviseSetCoarseGrain, device_id));
+  CHECK(hipMemAdvise(p.rhs, nbytes, hipMemAdviseSetCoarseGrain, device_id));
+  CHECK(hipMallocManaged(&p.sol, nbytes));
+  CHECK(hipMemAdvise(p.sol, nbytes, hipMemAdviseSetCoarseGrain, device_id));
   for (int i = 0; i < p.nnz * p.nrhs; i++) {
     f >> p.rhs[i];
   }
@@ -86,11 +90,19 @@ struct problem read_problem()
 struct problem problem_to_device(struct problem p)
 {
   struct problem d_p = p;
+  int device_id;
+
+  CHECK(hipGetDevice(&device_id));
 
   CHECK(hipMalloc(&d_p.row_ptr, (p.nrows + 1) * sizeof(int)));
   CHECK(hipMalloc(&d_p.col_ind, p.nnz * sizeof(int)));
   CHECK(hipMalloc(&d_p.val, p.nnz * sizeof(complex_t)));
-  CHECK(hipMalloc(&d_p.rhs, p.nnz * p.nrhs * sizeof(complex_t)));
+  // rhs is always managed
+  // CHECK(hipMalloc(&d_p.rhs, p.nnz * p.nrhs * sizeof(complex_t)));
+  CHECK(hipMalloc(&d_p.sol, p.nnz * p.nrhs * sizeof(complex_t)));
+  CHECK(hipMallocManaged(&d_p.sol_m, p.nnz * p.nrhs * sizeof(complex_t)));
+  CHECK(hipMemAdvise(d_p.sol_m, p.nnz * p.nrhs * sizeof(complex_t),
+                     hipMemAdviseSetCoarseGrain, device_id));
 
   CHECK(hipMemcpy(d_p.row_ptr, p.row_ptr, (p.nrows + 1) * sizeof(int), hipMemcpyDeviceToDevice));
   CHECK(hipMemcpy(d_p.col_ind, p.col_ind, p.nnz * sizeof(int), hipMemcpyDeviceToDevice));
@@ -102,7 +114,7 @@ struct problem problem_to_device(struct problem p)
   return d_p;
 }
 
-void solve(rocsparse_handle h, struct problem p)
+void solve(rocsparse_handle h, struct problem p, bool copy_out=false)
 {
   rocsparse_status status;
   rocsparse_mat_descr l_mat_descr;
@@ -183,12 +195,15 @@ void solve(rocsparse_handle h, struct problem p)
 
   /* step 1: solve L * Y = B */
   clock_gettime(CLOCK_MONOTONIC, &start);
+
+  hipMemcpy(p.sol, p.rhs, p.nrows * p.nrhs * sizeof(complex_t),
+            hipMemcpyDeviceToDevice);
   status = rocsparse_zcsrsm_solve(h,
     rocsparse_operation_none,
     rocsparse_operation_none,
     p.nrows, p.nrhs, p.nnz, (rocsparse_double_complex*)&h_one, l_mat_descr,
     (rocsparse_double_complex*)p.val, p.row_ptr, p.col_ind,
-    (rocsparse_double_complex*)p.rhs, p.nrows,
+    (rocsparse_double_complex*)p.sol, p.nrows,
     l_mat_info, rocsparse_solve_policy_auto,
     l_work);
   assert(rocsparse_status_success == status);
@@ -199,10 +214,15 @@ void solve(rocsparse_handle h, struct problem p)
     rocsparse_operation_none,
     p.nrows, p.nrhs, p.nnz, (rocsparse_double_complex*)&h_one, u_mat_descr,
     (rocsparse_double_complex*)p.val, p.row_ptr, p.col_ind,
-    (rocsparse_double_complex*)p.rhs, p.nrows,
+    (rocsparse_double_complex*)p.sol, p.nrows,
     u_mat_info, rocsparse_solve_policy_auto,
     u_work);
   assert(rocsparse_status_success == status);
+
+  if (copy_out) {
+    hipMemcpy(p.sol_m, p.sol, p.nnz * p.nrhs * sizeof(complex_t),
+              hipMemcpyDeviceToDevice);
+  }
 
   CHECK(hipDeviceSynchronize());
   clock_gettime(CLOCK_MONOTONIC, &end);
@@ -228,25 +248,27 @@ int main (int argc, char *argv[])
   std::cout << "nnz " << p.nnz << std::endl;
   std::cout << "nrhs " << p.nrhs << std::endl;
 
-  std::cout << "warmup run" << std::endl;
+  std::cout << "managed warmup run" << std::endl;
   solve(h, p);
 
   std::cout << "managed memory runs" << std::endl;
   solve(h, p);
-  std::cout << p.rhs[0] << std::endl;
+  // std::cout << p.rhs[0] << std::endl;
   solve(h, p);
-  std::cout << p.rhs[0] << std::endl;
+  // std::cout << p.rhs[0] << std::endl;
   solve(h, p);
-  std::cout << p.rhs[0] << std::endl;
+  // std::cout << p.rhs[0] << std::endl;
   solve(h, p);
 
   auto d_p = problem_to_device(p);
 
+  std::cout << "device warmup run" << std::endl;
+  solve(h, d_p, true);
   std::cout << "device memory runs" << std::endl;
-  solve(h, d_p);
-  solve(h, d_p);
-  solve(h, d_p);
-  solve(h, d_p);
+  solve(h, d_p, true);
+  solve(h, d_p, true);
+  solve(h, d_p, true);
+  solve(h, d_p, true);
 
   return 0;
 }
