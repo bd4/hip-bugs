@@ -1,4 +1,4 @@
-ROCM_PATH = /opt/rocm-5.2.0
+ROCM_PATH = /opt/rocm-5.1.0
 CUDA_PATH = /usr/local/cuda
 HIPFFT_CUDA_PATH = $(HOME)/soft/hipfft/cuda
 
@@ -28,6 +28,12 @@ batched_zgetrs_nvcc_read: batched_zgetrs.cxx
 
 bench_sparse: bench_sparse.cxx
 	HIP_PLATFORM="amd" hipcc -g -O2 -std=c++14 --amdgpu-target=gfx90a:xnack+ -L $(ROCM_PATH)/lib -lrocblas -lrocsolver -lrocsparse -I $(ROCM_PATH)/include -o $@ $<
+
+repro_managed_slowness_devmem: repro_managed_slowness.cxx
+	HIP_PLATFORM="amd" hipcc -g -O2 -std=c++14 --amdgpu-target=gfx90a:xnack+ -L $(ROCM_PATH)/lib -I $(ROCM_PATH)/include -o $@ $<
+
+repro_managed_slowness_manmem: repro_managed_slowness.cxx
+	HIP_PLATFORM="amd" hipcc -DMANAGED -g -O2 -std=c++14 --amdgpu-target=gfx90a:xnack+ -L $(ROCM_PATH)/lib -I $(ROCM_PATH)/include -o $@ $<
 
 .PHONY: clean
 clean:
