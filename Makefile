@@ -29,11 +29,17 @@ batched_zgetrs_nvcc_read: batched_zgetrs.cxx
 bench_sparse: bench_sparse.cxx
 	HIP_PLATFORM="amd" hipcc -g -O2 -std=c++14 --amdgpu-target=gfx90a:xnack+ -L $(ROCM_PATH)/lib -lrocblas -lrocsolver -lrocsparse -I $(ROCM_PATH)/include -o $@ $<
 
+.PHONY: repro_managed_slowness
+repro_managed_slowness: repro_managed_slowness_devmem repro_managed_slowness_manmem repro_managed_slowness_manmem_advise
+
 repro_managed_slowness_devmem: repro_managed_slowness.cxx
 	HIP_PLATFORM="amd" hipcc -g -O2 -std=c++14 --amdgpu-target=gfx90a:xnack+ -L $(ROCM_PATH)/lib -I $(ROCM_PATH)/include -o $@ $<
 
 repro_managed_slowness_manmem: repro_managed_slowness.cxx
 	HIP_PLATFORM="amd" hipcc -DMANAGED -g -O2 -std=c++14 --amdgpu-target=gfx90a:xnack+ -L $(ROCM_PATH)/lib -I $(ROCM_PATH)/include -o $@ $<
+
+repro_managed_slowness_manmem_advise: repro_managed_slowness.cxx
+	HIP_PLATFORM="amd" hipcc -DMANAGED -DMANAGED_ADVISE -g -O2 -std=c++14 --amdgpu-target=gfx90a:xnack+ -L $(ROCM_PATH)/lib -I $(ROCM_PATH)/include -o $@ $<
 
 .PHONY: clean
 clean:

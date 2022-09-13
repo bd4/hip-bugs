@@ -41,9 +41,11 @@ template <typename T>
 void hipMallocManaged2(T **p, size_t nbytes, int device_id)
 {
   CHECK(hipMallocManaged(p, nbytes));
+#ifdef MANAGED_ADVISE
   CHECK(hipMemAdvise(*p, nbytes, hipMemAdviseSetCoarseGrain, device_id));
   CHECK(hipMemAdvise(*p, nbytes, hipMemAdviseSetPreferredLocation, device_id));
   CHECK(hipMemAdvise(*p, nbytes, hipMemAdviseSetAccessedBy, device_id));
+#endif
 }
 
 
