@@ -37,6 +37,16 @@ __global__ void kernel_assign_1(const int size, double *lhs, double *rhs)
 }
 
 
+template <typename T>
+void hipMallocManaged2(T **p, size_t nbytes, int device_id)
+{
+  CHECK(hipMallocManaged(p, nbytes));
+  CHECK(hipMemAdvise(*p, nbytes, hipMemAdviseSetCoarseGrain, device_id));
+  CHECK(hipMemAdvise(*p, nbytes, hipMemAdviseSetPreferredLocation, device_id));
+  CHECK(hipMemAdvise(*p, nbytes, hipMemAdviseSetAccessedBy, device_id));
+}
+
+
 int main (int argc, char *argv[])
 {
   const int n = 10 * 1024 * 1024;
@@ -48,12 +58,15 @@ int main (int argc, char *argv[])
   struct timespec start, end;
   double elapsed, total;
 
+  int device_id;
+  CHECK(hipGetDevice(&device_id));
+
   // data coming in is always managed
-  CHECK(hipMallocManaged(&d_a, nbytes));
+  hipMallocManaged2(&d_a, nbytes, device_id);
 
   // intermediate managed or device to compare
 #ifdef MANAGED
-  CHECK(hipMallocManaged(&d_b, nbytes));
+  hipMallocManaged2(&d_b, nbytes, device_id);
 #else
   CHECK(hipMalloc(&d_b, nbytes));
 #endif
@@ -66,8 +79,8 @@ int main (int argc, char *argv[])
   dim3 nblocks(n / block_size);
   dim3 threads_per_block(block_size);
   while (total < max_seconds) {
-    CHECK(hipMemcpy(d_b, d_a, nbytes, hipMemcpyDeviceToDevice));
     clock_gettime(CLOCK_MONOTONIC, &start);
+    CHECK(hipMemcpy(d_b, d_a, nbytes, hipMemcpyDeviceToDevice));
     kernel_assign_1<<<nblocks, threads_per_block>>>(n, d_c, d_b);
     CHECK(hipGetLastError());
     CHECK(hipDeviceSynchronize());
