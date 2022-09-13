@@ -63,11 +63,11 @@ int main (int argc, char *argv[])
 
   total = 0.0;
   int niter = 0;
+  dim3 nblocks(n / block_size);
+  dim3 threads_per_block(block_size);
   while (total < max_seconds) {
-    clock_gettime(CLOCK_MONOTONIC, &start);
     CHECK(hipMemcpy(d_b, d_a, nbytes, hipMemcpyDeviceToDevice));
-    dim3 nblocks(n / block_size);
-    dim3 threads_per_block(block_size);
+    clock_gettime(CLOCK_MONOTONIC, &start);
     kernel_assign_1<<<nblocks, threads_per_block>>>(n, d_c, d_b);
     CHECK(hipGetLastError());
     CHECK(hipDeviceSynchronize());
